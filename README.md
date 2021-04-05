@@ -1,2 +1,3 @@
-# DoorbellSubscriber
-Arduino-based doorbell gateway client running on a NodeMCU with MQTT and graphical frontend 
+# Doorbell Gateway MQTT Subscriber
+
+This is the counterpart of [DoorbellSubscriber](https://github.com/maehw/DoorbellPublisher). Please find further documentation there.
