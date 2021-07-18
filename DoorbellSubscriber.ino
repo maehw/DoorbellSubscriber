@@ -6,13 +6,15 @@
 #include <PubSubClient.h>
 #include <Adafruit_NeoPixel.h>
 #include <Wire.h>
-#include "SSD1306Wire.h"
 
 #include "images.h"
 #include "config.h"
 
 // Initialize the OLED display using Arduino Wire:
-SSD1306Wire display(0x3c, SDA, SCL);
+#ifdef USE_DISPLAY
+  #include "SSD1306Wire.h"
+  SSD1306Wire display(0x3c, SDA, SCL);
+#endif
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -38,10 +40,12 @@ void setup()
     delay(100);
     setNeopixelColor(NEOPIXEL_COLOR_ORANGE);
     delay(200);
-  
+
+#ifdef USE_DISPLAY
     display.init();
     display.flipScreenVertically();
-  
+#endif
+
     setup_wifi();
     setup_mqtt();
 
@@ -60,7 +64,7 @@ void mqtt_reconnect()
         Serial.print("Attempting MQTT connection...");
 
         // Attempt to connect
-        if( client.connect("DoorbellSubscriber", "", "") )
+        if( client.connect("DoorbellSubscriber") )
         {
             Serial.println("connected");
 
@@ -73,9 +77,11 @@ void mqtt_reconnect()
         {
             bBroken = true;
             setNeopixelColor(NEOPIXEL_COLOR_RED);
+#ifdef USE_DISPLAY
             display.clear();
             drawBrokenLink();
             display.display();
+#endif /* USE_DISPLAY */
 
             Serial.print("failed, rc=");
             Serial.print(client.state());
@@ -89,8 +95,10 @@ void mqtt_reconnect()
     if( bBroken )
     {
         /* connection was broken (could not directly be re-established; should remove the broken link symbol */
+#ifdef USE_DISPLAY
         display.clear();
         display.display();
+#endif /* USE_DISPLAY */
     }
 }
 
@@ -98,9 +106,11 @@ void setup_wifi()
 {
     delay(10);
 
+#ifdef USE_DISPLAY
     display.clear();
     drawWifiDisconnected();
     display.display();
+#endif /* USE_DISPLAY */
     delay(2000);
 
     // We start by connecting to a WiFi network
@@ -122,6 +132,7 @@ void setup_wifi()
     Serial.print("IP address: ");
     Serial.println(WiFi.localIP());
 
+#ifdef USE_DISPLAY
     display.clear();
     display.setFont(ArialMT_Plain_10);
     display.setTextAlignment(TEXT_ALIGN_CENTER);
@@ -129,6 +140,7 @@ void setup_wifi()
     display.setFont(ArialMT_Plain_16);
     display.drawString(64, 40, WiFi.localIP().toString() );
     display.display();
+#endif /* USE_DISPLAY */
 
     delay(3000);
 }
@@ -144,40 +156,42 @@ void setup_mqtt(void)
     }
 }
 
-void drawBell(bool bOnOff)
-{
-    // see http://blog.squix.org/2015/05/esp8266-nodemcu-how-to-create-xbm.html
-    // on how to create xbm files
-
-    if( bOnOff )
-    {
-        display.drawXbm(34, 2, doorbell_width, doorbell_height, doorbell_bits);
-    }
-    else
-    {
-        display.drawXbm(34, 2, doorbell_noring_width, doorbell_noring_height, doorbell_noring_bits);
-    }
-}
-
-void drawBellUnknown(void)
-{
-    display.drawXbm(34, 2, doorbell_unknown_width, doorbell_unknown_height, doorbell_unknown_bits);
-}
-
-void drawBrokenLink(void)
-{
-    display.drawXbm(34, 2, broken_link_width, broken_link_height, broken_link_bits);
-}
-
-void drawWifiDisconnected(void)
-{
-    display.drawXbm(34, 2, wifi_disconnected_width, wifi_disconnected_height, wifi_disconnected_bits);
-}
-
-void drawHeart(void)
-{
-    display.drawXbm(118, 2, heart_width, heart_height, heart_bits);
-}
+#ifdef USE_DISPLAY
+  void drawBell(bool bOnOff)
+  {
+      // see http://blog.squix.org/2015/05/esp8266-nodemcu-how-to-create-xbm.html
+      // on how to create xbm files
+  
+      if( bOnOff )
+      {
+          display.drawXbm(34, 2, doorbell_width, doorbell_height, doorbell_bits);
+      }
+      else
+      {
+          display.drawXbm(34, 2, doorbell_noring_width, doorbell_noring_height, doorbell_noring_bits);
+      }
+  }
+  
+  void drawBellUnknown(void)
+  {
+      display.drawXbm(34, 2, doorbell_unknown_width, doorbell_unknown_height, doorbell_unknown_bits);
+  }
+  
+  void drawBrokenLink(void)
+  {
+      display.drawXbm(34, 2, broken_link_width, broken_link_height, broken_link_bits);
+  }
+  
+  void drawWifiDisconnected(void)
+  {
+      display.drawXbm(34, 2, wifi_disconnected_width, wifi_disconnected_height, wifi_disconnected_bits);
+  }
+  
+  void drawHeart(void)
+  {
+      display.drawXbm(118, 2, heart_width, heart_height, heart_bits);
+  }
+#endif /* USE_DISPLAY */
 
 void loop()
 {
@@ -188,6 +202,7 @@ void loop()
     }
     client.loop();
 
+#ifdef USE_KEEPALIVE_TIMEOUT
     /* only decrement when timeout has not already occured, else uint underflow */
     if( g_nTimeout > 0 )
     {
@@ -206,7 +221,9 @@ void loop()
             setNeopixelColor(NEOPIXEL_COLOR_BLACK);
         }
     }
+#endif /* USE_KEEPALIVE_TIMEOUT */
 
+#ifdef USE_DISPLAY
     display.clear();
     nProgressBarVal = g_nTimeout*100/TIMEOUT_RESET_VAL;
     if( 0 == g_nTimeout )
@@ -218,6 +235,7 @@ void loop()
         display.drawProgressBar(1, 1, 110, 6, nProgressBarVal);
     }
     display.display();
+#endif /* USE_DISPLAY */
     delay(1000);
 }
 
@@ -244,33 +262,41 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length)
 
         for(int k=0; k<10; k++)
         {
+#ifdef USE_DISPLAY
             display.clear();
             drawBell(true);
             display.display();
+#endif /* USE_DISPLAY */
             setNeopixelColor(NEOPIXEL_COLOR_BLUE);
             delay(1000);
           
+#ifdef USE_DISPLAY
             display.clear();
             drawBell(false);
             display.display();
+#endif /* USE_DISPLAY */
             setNeopixelColor(NEOPIXEL_COLOR_WHITE);
             delay(1000);
         }
 
         setNeopixelColor(NEOPIXEL_COLOR_BLACK);
     }
+#ifdef USE_KEEPALIVE_TIMEOUT
     else
     {
         /* we did not receive a ding-dong; at least signal heartbeat! */
 
+#ifdef USE_DISPLAY
         /* add heart symbol for heartbeat to the display */
         //display.clear();
         drawHeart();
         display.display();
-  
+#endif /* USE_DISPLAY */
+
         /* make sure that the heart is displayed at least for a short time */
         delay(300);
     }
+#endif USE_KEEPALIVE_TIMEOUT
 }
 
 void setNeopixelColor(uint8_t r, uint8_t g, uint8_t b)
@@ -288,4 +314,3 @@ void setNeopixelColor(uint8_t r, uint8_t g, uint8_t b)
     }
     pixels.show();
 }
-

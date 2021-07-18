@@ -24,3 +24,10 @@
 #define NEOPIXEL_COLOR_BLACK    0, 0, 0
 #define NEOPIXEL_COLOR_WHITE    10, 10, 10
 
+/* define use display */
+//#define USE_DISPLAY
+#undef USE_DISPLAY
+
+/* define keep-alive timeout */
+//#define USE_KEEPALIVE_TIMEOUT
+#undef USE_KEEPALIVE_TIMEOUT
